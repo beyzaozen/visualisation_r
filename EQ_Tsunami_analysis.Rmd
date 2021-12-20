@@ -1,0 +1,43 @@
+---
+title: "EQ_Tsunami_Analysis"
+author: "Beyza Özen"
+date: "12/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+earthquake <- read_csv("data/earthquake.csv")
+```
+
+```{r}
+library(dplyr)
+glimpse(earthquake)
+```
+
+
+```{r}
+library(lubridate)
+earthquake$Date <- dmy(earthquake$Date)
+```
+```{r}
+earthquake %>% select(`Magnitude Type`) %>% distinct()
+```
+# 2 histogram on 1 grpah. x=magnitude type y1 = type count,  y2= type dist with mgn values
+# another graph add magnitude type ws soruce to check if it is related to the type
+```{r}
+
+```
+
+# locational EQ with a small in inner graph with magnitude distribution with time
+```{r}
+
+
+```
+
+# depth vs magnitude with locational seperations 
+
