@@ -3,12 +3,14 @@ title: "EQ_Tsunami_Analysis"
 author: "Beyza Özen"
 date: "12/20/2021"
 output: html_document
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Data source: https://www.kaggle.com/kanncaa1/earthquake-animation-with-plotly/notebook
 ```{r}
 library(readr)
 earthquake <- read_csv("data/earthquake.csv")
@@ -24,20 +26,111 @@ glimpse(earthquake)
 library(lubridate)
 earthquake$Date <- dmy(earthquake$Date)
 ```
+# Why we have different magnitude types?
+
+When we calculating the magnitude of an earthquake, we need to scale down all the effects of an earthquake into one number which is less than 10. It is an extremely complex process since which property should we use? The energy of released by the explosion? Should we consider the depth of occurrence? Are the length and width of the cracking plate important?
+
+There are many questions that we need to consider. In general there are some basic and accepted magnitude types that shows the effect of the earthquake. Here I will check if some institutions publishing `Magnitude Source` have some preferation on magnitude types or they choose it according to size of the earthquake. 
+
+
 ```{r}
-earthquake %>% select(`Magnitude Type`) %>% distinct()
+earthquake %>% count(`Magnitude Type`) %>% distinct()
 ```
-# 2 histogram on 1 grpah. x=magnitude type y1 = type count,  y2= type dist with mgn values
-# another graph add magnitude type ws soruce to check if it is related to the type
 ```{r}
-
+earthquake %>% count(`Magnitude Source`) %>% arrange(desc(n)) %>% slice(1:4)
 ```
-
-# locational EQ with a small in inner graph with magnitude distribution with time
+# 
 ```{r}
+library(ggplot2)
 
 
+p <- ggplot(earthquake, aes(x = `Magnitude Type`))+
+  geom_bar()+
+  geom_point(aes(y = Magnitude))+
+  scale_y_continuous(sec.axis = sec_axis(~.*0.0001))
+
+p
 ```
 
-# depth vs magnitude with locational seperations 
+
+# Locational earthquake visualisation with a small inner map focused on Japan
+
+World map coordinates are avaiblable on tidyverse
+```{r}
+world <- map_data("world")
+```
+filtering the coordinate data of Japan and it subregions into new variable. 
+```{r}
+japan <- world %>% filter(region== 'Japan') 
+```
+
+Filtering earthquake data so that I can only focus on earthquakes larger than magnitude 7. Also I will only consider MW as magnitude type since it is the most stable one for higher magnitudes. 
+```{r}
+earthquake7 <- earthquake %>% filter(Magnitude>=7 & `Magnitude Type` =='MW')
+```
+To visualization, I referenced from the below 2 websites. I combined the 2 method for my data.
+  - https://datavizpyr.com/how-to-make-world-map-with-ggplot2-in-r/
+  - https://datavizpyr.com/how-to-zoom-in-on-a-plot-in-r/
+```{r}
+library(ggforce)
+ggplot() +
+  geom_map(
+    data = world, map = world,
+    aes(long, lat, map_id = region),
+        color = "black", fill = "lightgray", size = 0.2
+  ) +
+  geom_point(
+    data = earthquake7,
+    aes(Longitude, Latitude, alpha= Magnitude, size = Magnitude),
+  ) +
+  ggtitle("Japan") +
+  facet_zoom(ylim = c(min(japan$lat), max(japan$lat)), xlim = c(min(japan$long), max(japan$long)),zoom.size = 0.4)
+```
+
+
+# Depth vs magnitude with locational seperations 
+In this last part, I would like to focus on the animation given in my data source. The person who upload the data that I use on to Kaggle also provide a beautiful animation with time. S/he used to Python. My purpose is to recreate it using shiny on r. 
+```{r}
+eq <- earthquake %>% filter(!is.na(Date))
+eq$year <- as.numeric(format(eq$Date, format="%Y"))
+```
+
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+ 
+  sliderInput(inputId = "Date", 
+            label = "Date",
+            min = 1960, max = 2015,value = 2001,step=1), 
+  
+  plotOutput(outputId = "plot")
+  
+)
+
+server <- function(input, output) {
+  
+  
+output$plot <- renderPlot({
+  
+  ggplot() +
+  geom_map(
+    data = world, map = world,
+    aes(long, lat, map_id = region),
+        color = "white", fill = "lightgray", size = 0.2
+  ) +
+  geom_point(
+    data = eq %>% filter(year==input$Date),
+    aes(Longitude, Latitude, size = Magnitude,color =Depth),
+    alpha = 0.6
+  ) 
+  
+})
+  
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+
 
