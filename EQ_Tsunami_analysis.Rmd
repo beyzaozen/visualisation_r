@@ -9,7 +9,7 @@ runtime: shiny
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
+ 
 Data source: https://www.kaggle.com/kanncaa1/earthquake-animation-with-plotly/notebook
 ```{r}
 library(readr)
@@ -26,30 +26,48 @@ glimpse(earthquake)
 library(lubridate)
 earthquake$Date <- dmy(earthquake$Date)
 ```
-# Why we have different magnitude types?
+# Earthquake magnitude-depth relation
+In this part, I inspired from the article given below. 
+https://www.researchgate.net/figure/A-scatter-plot-for-M-W-versus-depth-km-for-the-earthquakes-in-the-F-net-catalog_fig11_283867433
 
-When we calculating the magnitude of an earthquake, we need to scale down all the effects of an earthquake into one number which is less than 10. It is an extremely complex process since which property should we use? The energy of released by the explosion? Should we consider the depth of occurrence? Are the length and width of the cracking plate important?
-
-There are many questions that we need to consider. In general there are some basic and accepted magnitude types that shows the effect of the earthquake. Here I will check if some institutions publishing `Magnitude Source` have some preferation on magnitude types or they choose it according to size of the earthquake. 
-
-
-```{r}
-earthquake %>% count(`Magnitude Type`) %>% distinct()
-```
-```{r}
-earthquake %>% count(`Magnitude Source`) %>% arrange(desc(n)) %>% slice(1:4)
-```
-# 
 ```{r}
 library(ggplot2)
 
 
-p <- ggplot(earthquake, aes(x = `Magnitude Type`))+
-  geom_bar()+
-  geom_point(aes(y = Magnitude))+
-  scale_y_continuous(sec.axis = sec_axis(~.*0.0001))
+p<-earthquake %>% 
+  filter(!is.na(Magnitude) & !is.na(Depth) & Depth != 0)%>% 
+  ggplot()+
+  geom_point(aes(x = Depth, y = Magnitude)) 
 
-p
+ggExtra::ggMarginal(p, type = "densigram")
+
+```
+
+This plot is easy with ggMarginal function provided by package ggExtra. I want to show is distributions for depth and magnitude of earthquakes. I know that magnitude distribution has a exponential curve. This is why I want to add logarithmic scale to the histograms. Unfortunately I could not find a mthod on ggMarginal to make it happen. So I use the code below to create logarithmic y scales for frequencies. 
+
+
+```{r}
+hist_top <- ggplot()+
+  geom_histogram(aes(earthquake$Depth))+
+  scale_y_continuous(name = "" , trans='log10')+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank())
+
+
+empty <- ggplot()+geom_point(aes(1,1), colour="white")+
+         theme(axis.ticks=element_blank(), 
+               panel.background=element_blank(), 
+               axis.text.x=element_blank(), axis.text.y=element_blank(),           
+               axis.title.x=element_blank(), axis.title.y=element_blank())
+
+
+hist_right <- ggplot()+
+  geom_histogram(aes(earthquake$Magnitude))+
+  scale_y_continuous(name = "" , trans='log10')+
+  coord_flip()+
+  theme(axis.title.y=element_blank(), axis.text.y=element_blank())
+
+library(gridExtra)
+grid.arrange(hist_top, empty, p, hist_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
 ```
 
 
@@ -90,6 +108,8 @@ ggplot() +
 
 # Depth vs magnitude with locational seperations 
 In this last part, I would like to focus on the animation given in my data source. The person who upload the data that I use on to Kaggle also provide a beautiful animation with time. S/he used to Python. My purpose is to recreate it using shiny on r. 
+I use the webside below as reference to create the visualisation.
+  https://bookdown.org/ihaddaden_fodeil/shiny_book-master/reactivity.html
 ```{r}
 eq <- earthquake %>% filter(!is.na(Date))
 eq$year <- as.numeric(format(eq$Date, format="%Y"))
@@ -99,10 +119,10 @@ eq$year <- as.numeric(format(eq$Date, format="%Y"))
 library(shiny)
 
 ui <- fluidPage(
- 
+
   sliderInput(inputId = "Date", 
             label = "Date",
-            min = 1960, max = 2015,value = 2001,step=1), 
+            min = min(eq$year), max = max(eq$year),value = 2001,step=1), 
   
   plotOutput(outputId = "plot")
   
@@ -131,6 +151,6 @@ output$plot <- renderPlot({
 
 shinyApp(ui = ui, server = server)
 ```
-
+Note: Unfortunately, I could not find a wey to change the date styles in the slider. Having commas in the format really doesn't look nice and can cause confusion. 
 
 
