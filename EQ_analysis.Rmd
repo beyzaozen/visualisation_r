@@ -20,7 +20,7 @@ earthquake <- read_csv("data/earthquake.csv")
 library(dplyr)
 glimpse(earthquake)
 ```
-
+> I count this as a table
 
 ```{r}
 library(lubridate)
@@ -152,5 +152,8 @@ output$plot <- renderPlot({
 shinyApp(ui = ui, server = server)
 ```
 
+> Great effort, good charts, good referencing of sources and inspiration for plots, all adequate. A bit more color might have been nice but we discussed this previously and I can understand why you chose not to. Great use of shiny. 
+> The setup with renv or an install script could have been improved; also, you seem to have used the Rmd more like a notebook setup. You could split the documents, one as a Rmd and one as a shiny app (just a suggestion)
+> A table is missing.   
 
 
